@@ -128,6 +128,27 @@ async def vapi_availability(
 
     slots = MOCK_SLOTS.get(department, [])
 
+    conn = booking_connection()
+    try:
+        reserved = conn.execute(
+            '''
+            SELECT appointment_time FROM bookings
+            WHERE department = ?
+              AND appointment_date = ?
+            ''',
+            (department, requested_date.isoformat())
+        ).fetchall()
+    finally:
+        conn.close()
+
+    booked_times = {
+        row["appointment_time"] for row in reserved
+    }
+    slots = [
+        slot for slot in slots
+        if slot not in booked_times
+    ]
+
     return {
         "available": bool(slots),
         "department": department,
